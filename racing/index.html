@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <meta name="description" content="Tizen Wearable Web Basic Template" />
+
+    <title>Racing game</title>
+
+    <link rel="stylesheet" type="text/css" href="css/style.css" />
+    <script src="js/main.js"></script>
+</head>
+
+<body>
+	<div id="menu" class="page">
+		<div class="contents">
+			<h2>WATCH OUT<br>FOR CARS</h2>
+			<button id="start-game" onclick="initializeField()">Start game</button>
+		</div>
+	</div>
+
+    <div id="main" class="page">
+        <div class="contents">
+            <canvas id="game" style='border:1px solid;'></canvas>
+        </div>
+    </div>
+    
+    <div id="gameOver" class="page">
+    	<div class="contents">
+    		<div id="score"></div>
+	    	<button id="tryAgain" onClick="initializeField()">
+	    		Try again
+	    		<!-- по клику инициализировать все заново -->
+	    	</button>
+    	</div>
+    </div>
+</body>
+
+</html>
