@@ -1,10 +1,12 @@
 config.xml__DEL__9hCZA7c5X1Aw1nbHy8b8phSCxWC1gVcODlyq82l5Vf4=
 css/style.css__DEL__Yc5/Km/O7fXXLzDC0Xc34K+k00+3OFIEkRFZXNT7pAI=
 icon.png__DEL__vPjxjOppORd6hn9Bw4sh06gqtDoJzoFbV/8e9FyIdvk=
-img/blue_priora.png__DEL__zpUFvDDB4e+3Hlp+Yc7pTSAqg9hOY22XNkoVJjI7zDw=
+img/blue_priora_30.png__DEL__zpUFvDDB4e+3Hlp+Yc7pTSAqg9hOY22XNkoVJjI7zDw=
+img/blue_priora_35.png__DEL__JYNu+Vxw3H45plIiAowD7JdiV9RjbpM3wLY319XGG74=
 img/blue_priora_40.png__DEL__F/0wcKMg8iKUpLQbe1449kWSSEroqhheQ47asRzAOT8=
 img/blue_priora_45.png__DEL__TvzmSD+qX+hTD7TrS9GkzuhdEGJD0haiJ8mkSCNzYSY=
-img/violet_priora.png__DEL__h27jH4osjpaDMOSV7SOpb5/WZtZHhGLfm6K6I32eOSQ=
+img/violet_priora_30.png__DEL__h27jH4osjpaDMOSV7SOpb5/WZtZHhGLfm6K6I32eOSQ=
+img/violet_priora_35.png__DEL__DGEPcf8C5HkWxA8zFYsQmCT9rof6h959wwsQ1i8Eadw=
 img/violet_priora_40.png__DEL__i/D1rdBgHNtGOkG//531qfar79apRPnsXhXV/HNJg5A=
 img/violet_priora_45.png__DEL__IWrSx2QDCkStcOO5g1c6iMEvBp6QsZ0dxOMrB8qa7OM=
 index.html__DEL__cLiKXVPPtcOzeqDGIjNBEXtDosOtQW3zEEMkwTmxWiE=
@@ -253,5 +255,8 @@ lib/tau/wearable/theme/default/tau.css__DEL__3OOU8BQRwDSxgd4HS8L1+fgDFBC640/eHOf
 lib/tau/wearable/theme/default/tau.min.css__DEL__wjbBefQVQCpTL7YLBs0/I8UfpRHowBWNSzzDqL25Imc=
 lib/tau/wearable/theme/default/tau.min.template__DEL__LO0fVlByyNr0CnFq2/3aymR2aFMwCjO7ii/oBwCh+HE=
 lib/tau/wearable/theme/default/tau.template__DEL__wYDkhwm83vZuSadZdEGyo/z72D2P9icIh8ukBWsBgT8=
-author-signature.xml__DEL__G1QZRCwb48OExaH+8eUEjW9BXSTl7Dy6beUlC2Y3UqE=
-js/main.js__DEL__PkeJUrfM443Ap6cMFaNdeB+YUSrW/YTkqRPdtQPtxj8=
+author-signature.xml__DEL__+NLwAQE+pPKT/HQNQtxsBJoNBcr3aKPi1QtjEASQTwc=
+img/star.gif__DEL__sWoujfRvhL+7pg1xzpFPiKukNtFQXwdETIFFSct/7yM=
+img/star_10.gif__DEL__7QVs6LZirrS8rO3wTUSY6IXJlr6iMvAKUEjGKfVOnJA=
+img/star_30.gif__DEL__chzoO1f+5Ak5djEOiEIAibfyBVI56ECPggB2E+7AZjY=
+js/main.js__DEL__dT+vosL8TxjYALCmEsmD83gNCSNurK60GzQ3dsRz5kU=

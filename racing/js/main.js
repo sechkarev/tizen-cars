@@ -26,12 +26,11 @@ var stripes; //two-dimentional array of stripes
 var player;
 var cars;
 
-var CAR_HEIGHT = 84;
-var CAR_WIDTH = 40;
-var PLAYER_MOVE = 20;
+const CAR_HEIGHT = 73;
+const CAR_WIDTH = 35;
 
-var playerVelocity = 9;
-var overtakingDistance = 50;
+const playerVelocity = 9;
+const overtakingDistance = 50;
 
 var intervalID;
 
@@ -41,20 +40,55 @@ const FRAME_INTERVAL = 1000 / FPS; //40
 const DIRECTION_DIRECT = 0;
 const DIRECTION_LEFT = -1;
 const DIRECTION_RIGHT = 1;
+
+const LIGHT_NONE = 0;
+const LIGHT_LEFT = -1;
+const LIGHT_RIGHT = 1;
+
 const FRAMES_TO_CHANGE_LANE = 12;
+const NUMBER_OF_LANES = 4;
+
+const LIGHT_MARGIN_TOP = 8;
+const LIGHT_MARGIN_BOTTOM = 16;
+const LIGHT_MARGIN_LEFT = 8;
+const LIGHT_MARGIN_RIGHT = 18;
+
+//TODO: добавить новые ТС (грузовик, трактор)
+//TODO: чуть-чуть улучшить управление: добавить возможность отменять повороты.
+
+//TODO: БД.
+//TODO: переделать кнопки.
+
+var spawn_interval = FPS - 1;
+var spawn_interval_decrease = 0; //что-то типа ускорения
 
 function rotaryDetentHandler(e){
 	var direction = e.detail.direction;
-	if (direction === "CW"){
-		player.positionX+=PLAYER_MOVE; //probably will be changed
-		if (player.positionX + player.width > 5 * screenWidth / 6 - stripeWidth / 2){
-			player.positionX = 5 * screenWidth / 6 - stripeWidth / 2 - player.width;
+	//нужно как-то научиться не регистрировать колесо два раза
+	//костыль: 12 фреймов - это, в общем-то, не так много. не считывать инпут, пока поворот не завершится.
+	if (player.turnCounter < 0){
+		if (direction === "CW"){
+			if (player.lane !== NUMBER_OF_LANES - 1){
+				player.direction = DIRECTION_RIGHT;
+				player.turnCounter = FRAMES_TO_CHANGE_LANE;
+				console.log("the wheel turned clockwise");
+			}
+		}
+		else{
+			if (player.lane !== 0){
+				player.direction = DIRECTION_LEFT;
+				player.turnCounter = FRAMES_TO_CHANGE_LANE;
+				console.log("the wheel turned counterclockwise");
+			}
 		}
 	}
-	else{
-		player.positionX-=PLAYER_MOVE;
-		if (player.positionX < screenWidth / 6 + stripeWidth / 2){
-			player.positionX = screenWidth / 6 + stripeWidth / 2;
+	else{ //поворот уже идет
+		if (direction === "CW" && player.direction === DIRECTION_LEFT){
+			player.direction = DIRECTION_RIGHT;
+			//ВЕРНУТЬСЯ НА ПРЕЖНЕЕ МЕСТО: вычислить, сколько фреймов для этого нужно
+		}
+		else if (direction === "CCW" && player.direction === DIRECTION_RIGHT){
+			player.direction = DIRECTION_LEFT;
 		}
 	}
 }
@@ -76,7 +110,7 @@ function initializeField(){
 			stripes[i].push(new stripe(width / 6 * (i + 2), stripeHeight * j * 2));
 		}
 	}
-	//player = new playerSprite((screenWidth - CAR_WIDTH) / 2, (screenHeight - CAR_HEIGHT) / 10 * 9); 
+	player = new playerSprite(1, (screenHeight - CAR_HEIGHT) / 10 * 9); 
 	intervalID = setInterval(drawField, FRAME_INTERVAL, x);
 	document.location.href = "#main";
 }
@@ -97,7 +131,8 @@ function drawField(context){
 	context.fillRect(5 * screenWidth / 6 - stripeWidth / 2, 0, stripeWidth, screenHeight);
 	//STRIPES DRAWING -- end
 	
-	//player.draw(context); //DRAWING PLAYER
+	player.draw(context); //DRAWING PLAYER
+	player.move();
 	counter++;
 	
 	//OTHER CARS' SPAWN -- beginning
@@ -118,15 +153,60 @@ function drawField(context){
 		cars.push(new otherCar(lane2, -100, velocity));
 	}*/
 	
-	if (counter % (FPS * 5) === 25){
-		cars.push(new otherCar(1, -100, 4)); //РАНЬШЕ ЗДЕСЬ БЫЛО 5 ЕСЛИ ЧО
+	/*if (counter % (FPS * 5) === 25){
+		cars.push(new otherCar(2, -100, 4.5)); //РАНЬШЕ ЗДЕСЬ БЫЛО 5 ЕСЛИ ЧО
 		cars.push(new otherCar(3, -100, 6)); 
 	}
 	
 	if (counter % (FPS * 5) === 50){
-		cars.push(new otherCar(1, -100, 7)); 
+		cars.push(new otherCar(2, -100, 7)); 
 		cars.push(new otherCar(3, -100, 7)); 
+	}*/
+	
+	//а теперь я просто попробую наспавнить много машинок и посмотреть, что получится
+	//идея: не спавнить новые машинки на той линии, где находится игрок, если на соседних линиях
+	//рядом с ним находятся машинки
+	if (counter % (FPS * 5) === 0 && spawn_interval_decrease < 8){ //каждые 5 секунд 
+		spawn_interval_decrease++; //ускорить спавн машинок
+		//дальше ускорять нельзя, проверено: машинка не успевает проехать 73 пикселя своего размера
 	}
+	if (counter % FPS === spawn_interval){
+		spawn_interval -= spawn_interval_decrease;
+		if(spawn_interval < 0){
+			spawn_interval += FPS;
+		}
+		var leftLaneCarPresent = (player.lane === 0); //если игрок движется по крайней слева линии
+		//то это тоже стоит учесть
+		var rightLaneCarPresent = (player.lane === (NUMBER_OF_LANES - 1));
+		for (var i = 0; i < cars.length; ++i){
+			if (cars[i].lane === player.lane - 1){//and probably smth else
+				leftLaneCarPresent = true;
+			}
+			if (cars[i].lane === player.lane + 1){//and probably smth else
+				rightLaneCarPresent = true;
+			}
+		}
+		var spawnSameLaneAllowed = !(leftLaneCarPresent === true && rightLaneCarPresent === true);
+		//если машины есть слева и справа, то спавнить машинку прямо перед игроком нельзя
+		var lane;
+		//скорость машины зависит от полосы, по которой она едет. 
+		//(в реальной жизни обычно наоборот, но игры - это ложь.)
+		if (Math.random() > 0.5){
+			lane = player.lane;
+		}
+		else{
+			lane = Math.floor(Math.random() * 4);
+		}
+		while (!spawnSameLaneAllowed && lane === player.lane){
+			lane = Math.floor(Math.random() * 4);
+		}
+		var velocity = Math.random() * 1.5 + (5 + lane / 2); //точные цифры - в блокноте.
+		var car = new otherCar(lane, -CAR_HEIGHT, velocity);
+		console.log("new car spawned: lane = " + car.lane + ", velocity = " + car.velocity + ", #frame = " + counter + ", #frame in second = " + counter % FPS);
+		cars.push(car);
+		
+	}
+	//идея: обгонять тогда, когда становится понятно, что машины не доедут до края экрана без коллизии
 	
 	//КОРОЧЕ ВАЖНАЯ ТЕМА
 	//скорость всех ТС будет ограничена в пределах, скажем, от 4,5 до 7
@@ -136,18 +216,47 @@ function drawField(context){
 	//FOR EACH CAR -- beginning
 	for (var i = 0; i < cars.length; ++i){
 		cars[i].draw(context); //draw
-		/*if (player.checkCollision(cars[i]) === true){ //collisions
+		if (player.checkCollision(cars[i]) === true){ //collisions
 			gameOver();
-		}*/
+		}
 		for (var j = 0; j < cars.length; ++j){
-			if (i !== j && cars[i].lane === cars[j].lane && 
-					cars[i].positionY - cars[j].positionY >= (cars[j].velocity - cars[i].velocity) * 30 - cars[i].height &&
-					//вот это число в правой части напрямую зависит от разницы скоростей.
-					//идея: добавить немного рандома?
-					cars[i].positionY - cars[j].positionY < 0 &&
-					cars[i].velocity > cars[j].velocity && 
-					cars[j].isOvertaking === false){
-				cars[j].overtake(cars[i], true); //алгоритм все еще не закончен: обгон всегда будет идти по левой полосе.
+			if (cars[j].isOvertaking === false && i !== j && cars[i].lane === cars[j].lane && 
+			cars[i].positionY - cars[j].positionY >= (cars[j].velocity - cars[i].velocity) * 30 - cars[i].height &&
+			//cars[i].positionY - cars[j].positionY >= cars[i].height * -2 && //i give up. maybe enhance later.
+			//вот это число в правой части напрямую зависит от разницы скоростей.
+			//идея: добавить немного рандома?
+			cars[i].positionY - cars[j].positionY < 0 &&
+			cars[i].velocity > cars[j].velocity){
+				var leftLaneFree = (cars[j].lane !== 0); //если обгоняющая машина движется по крайней левой полосе, то 
+				//обгон по левой полосе невозможен: ее просто нет
+				var rightLaneFree = (cars[j].lane !== (NUMBER_OF_LANES - 1)); //аналогично с правой
+				for (var k = 0; k < cars.length; ++k){ //O(n^3)
+					if (cars[k].lane === cars[j].lane + 1){ //если на линии, куда может быть совершен обгон, 
+						//есть другие автомобили, то обгон туда невозможен
+						rightLaneFree = false;
+					}
+					else if (cars[k].lane === cars[j].lane - 1){ //аналогично
+						leftLaneFree = false;
+					}
+				}
+				if (cars[j].lane === player.lane - 1){ //машинка игрока не находится в векторе машинок, но ее тоже надо учитывать.
+					rightLaneFree = false;
+				} //по-хорошему, это надо бы как-то организовать с помощью наследования, но я не очень-то умею в джаваскрипт, а умные люди говорят мне, что местная механика наследования сильно отличается от привычных мне 
+				if (cars[j].lane === player.lane + 1){ 
+					leftLaneFree = false;
+				}
+				if (leftLaneFree === true){
+					cars[j].overtake(cars[i], true);
+					console.log("overtake started: left lane");
+				}
+				else if (rightLaneFree === true){
+					cars[j].overtake(cars[i], false);
+					console.log("overtake started: right lane");
+				}
+				else{ //когда обгон вроде бы и должен быть, но полос для него нет
+					cars[j].velocity = cars[i].velocity; //снизить скорость во избежание аварии
+					console.log("overtake is impossible: no free lanes");
+				}
 			} 
 		}
 		cars[i].move(); //move
@@ -177,16 +286,19 @@ function stripe (x, y){
 	};
 }
 
-function playerSprite (x, y){
+function playerSprite (lane, y){
 	this.texture = new Image();
-	this.texture.src = "img/violet_priora_40.png";
-	this.positionX = x;
+	this.texture.src = "img/violet_priora_35.png";
+	this.lane = lane;
+	this.positionX = (lane + 1) * screenWidth / 6 + (screenWidth / 6 - CAR_WIDTH) / 2;
 	this.positionY = y;
 	this.height = CAR_HEIGHT;
 	this.width = CAR_WIDTH;
 	this.draw = function(context){
 		context.drawImage(this.texture, this.positionX, this.positionY);
 	};
+	this.direction = DIRECTION_DIRECT;
+	this.turnCounter = -1;
 	this.checkCollision = function(otherCar){
 		if (this.positionX < otherCar.positionX + otherCar.width &&
 			this.positionX + this.width > otherCar.positionX &&
@@ -196,11 +308,23 @@ function playerSprite (x, y){
 		}
 		return false;
 	};
+	this.move = function(){
+		var displacementX = this.direction * screenWidth / 6 / FRAMES_TO_CHANGE_LANE;
+		this.positionX += displacementX;
+		this.turnCounter--;
+		if (this.turnCounter === 0){
+			this.lane += this.direction;
+			this.direction = DIRECTION_DIRECT;
+			console.log("player's lane = " + this.lane);
+		}
+	};
 }
 
 function otherCar (lane, y, velocity){
 	this.texture = new Image();
-	this.texture.src = "img/blue_priora_40.png";
+	this.texture.src = "img/blue_priora_35.png";
+	this.lightTexture = new Image();
+	this.lightTexture.src = "img/star_30.gif";
 	this.lane = lane;
 	this.positionX = (lane + 1) * screenWidth / 6 + (screenWidth / 6 - CAR_WIDTH) / 2;
 	this.positionY = y;
@@ -211,23 +335,33 @@ function otherCar (lane, y, velocity){
 	this.direction = DIRECTION_DIRECT; //others are "left = -1" & "right = 1"
 	this.isOvertaking = false;
 	this.overtakeCounter = -1;
+	this.light = LIGHT_NONE;
 	this.draw = function(context){
 		context.drawImage(this.texture, this.positionX, this.positionY);
+		if (this.light === LIGHT_LEFT){
+			context.drawImage(this.lightTexture, this.positionX - LIGHT_MARGIN_LEFT, this.positionY - LIGHT_MARGIN_TOP);
+			context.drawImage(this.lightTexture, this.positionX - LIGHT_MARGIN_LEFT, this.positionY + CAR_HEIGHT - LIGHT_MARGIN_BOTTOM);
+		}
+		else if (this.light === LIGHT_RIGHT){
+			context.drawImage(this.lightTexture, this.positionX - LIGHT_MARGIN_RIGHT + CAR_WIDTH, this.positionY - LIGHT_MARGIN_TOP);
+			context.drawImage(this.lightTexture, this.positionX - LIGHT_MARGIN_RIGHT + CAR_WIDTH, this.positionY - LIGHT_MARGIN_BOTTOM + CAR_HEIGHT);
+		}
 	};
 	this.move = function(){
 		this.positionY += this.velocity;
 		var displacementX = this.direction * screenWidth / 6 / FRAMES_TO_CHANGE_LANE;
 		this.positionX += displacementX;
-		if (this.isOvertaking === true){
+		/*if (this.isOvertaking === true){
 			console.log("position: " + this.positionX + " " + this.positionY + ", displacementX = " +
 					displacementX + ", direction = " + this.direction + ", lane = " + this.lane + ", velocity = " + 
 					this.velocity);
-		}
+		}*/
 		this.overtakeCounter--;
 		if (this.overtakeCounter === 0){
+			this.lane += this.direction; //меняем полосу
 			this.direction = DIRECTION_DIRECT;
-			this.lane += 1; //меняем полосу
 			this.isOvertaking = false;
+			this.light = LIGHT_NONE;
 			//this.velocity = this.initialVelocity;
 			console.log("direction changed to direct, velocity = " + this.velocity);
 		}
@@ -240,11 +374,10 @@ function otherCar (lane, y, velocity){
 		//it presumes that the cars are on the same lane, the first car is 50 units close to the other
 		//and their velocities differ by at least 2
 		//direction: if true, car goes to the left (x decreases), otherwise right (x increases).
-		//добавляем 2 к скорости обгоняющей машины
+		this.light = leftDirection ? LIGHT_LEFT : LIGHT_RIGHT;
 		this.isOvertaking = true;
 		//this.velocity -= 2;
 		//this.velocity = car2.velocity;
-		
 		var overtakeDistance = overtakingDistance * 2 + car2.height;
 		//это часть того расстояния, что первой машине предстоит пройти.
 		//выясняем, за какое время произойдет обгон:
