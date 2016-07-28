@@ -53,14 +53,18 @@ const LIGHT_MARGIN_BOTTOM = 16;
 const LIGHT_MARGIN_LEFT = 8;
 const LIGHT_MARGIN_RIGHT = 18;
 
-//TODO: добавить новые ТС (грузовик, трактор)
-//TODO: чуть-чуть улучшить управление: добавить возможность отменять повороты.
+var velocityIncrease = 0;
+const velocityIncreasePerFrame = 0.002;
+const MAXIMAL_VELOCITY_INCREASE = 4;
+
+//TODO: добавить новые ТС (грузовик, трактор) (проблема: нет спрайтов)
 
 //TODO: БД.
-//TODO: переделать кнопки.
+//TODO: переделать кнопки. дома: создать проект с тау и скопировать потом результат
 
 var spawn_interval = FPS - 1;
 var spawn_interval_decrease = 0; //что-то типа ускорения
+const MAXIMAL_SPAWN_INTERVAL_DECREASE = 15; //15 здесь, похоже - оптимальный вариант
 
 function rotaryDetentHandler(e){
 	var direction = e.detail.direction;
@@ -69,6 +73,7 @@ function rotaryDetentHandler(e){
 	if (player.turnCounter < 0){
 		if (direction === "CW"){
 			if (player.lane !== NUMBER_OF_LANES - 1){
+				player.lane++; //теперь полоса меняется сразу же
 				player.direction = DIRECTION_RIGHT;
 				player.turnCounter = FRAMES_TO_CHANGE_LANE;
 				console.log("the wheel turned clockwise");
@@ -76,6 +81,7 @@ function rotaryDetentHandler(e){
 		}
 		else{
 			if (player.lane !== 0){
+				player.lane--;
 				player.direction = DIRECTION_LEFT;
 				player.turnCounter = FRAMES_TO_CHANGE_LANE;
 				console.log("the wheel turned counterclockwise");
@@ -84,11 +90,15 @@ function rotaryDetentHandler(e){
 	}
 	else{ //поворот уже идет
 		if (direction === "CW" && player.direction === DIRECTION_LEFT){
+			player.lane++;
 			player.direction = DIRECTION_RIGHT;
+			player.turnCounter = FRAMES_TO_CHANGE_LANE - player.turnCounter;
 			//ВЕРНУТЬСЯ НА ПРЕЖНЕЕ МЕСТО: вычислить, сколько фреймов для этого нужно
 		}
 		else if (direction === "CCW" && player.direction === DIRECTION_RIGHT){
 			player.direction = DIRECTION_LEFT;
+			player.turnCounter = FRAMES_TO_CHANGE_LANE - player.turnCounter;
+			player.lane--;
 		}
 	}
 }
@@ -102,6 +112,8 @@ function initializeField(){
 	stripes = [];
 	cars = [];
 	counter = 0;
+	spawn_interval_decrease = 0;
+	velocityIncrease = 0;
 	var x = canvas.getContext("2d");
 	x.font='18px Verdana';
 	for (var i = 0; i < 3; ++i){
@@ -134,6 +146,9 @@ function drawField(context){
 	player.draw(context); //DRAWING PLAYER
 	player.move();
 	counter++;
+	if (velocityIncrease < MAXIMAL_VELOCITY_INCREASE){
+		velocityIncrease += velocityIncreasePerFrame;
+	}
 	
 	//OTHER CARS' SPAWN -- beginning
 	/*var velocity_increase = Math.min((counter / 500), 3);
@@ -166,9 +181,8 @@ function drawField(context){
 	//а теперь я просто попробую наспавнить много машинок и посмотреть, что получится
 	//идея: не спавнить новые машинки на той линии, где находится игрок, если на соседних линиях
 	//рядом с ним находятся машинки
-	if (counter % (FPS * 5) === 0 && spawn_interval_decrease < 8){ //каждые 5 секунд 
+	if (counter % (FPS * 5) === 0 && spawn_interval_decrease < MAXIMAL_SPAWN_INTERVAL_DECREASE){ //каждые 5 секунд 
 		spawn_interval_decrease++; //ускорить спавн машинок
-		//дальше ускорять нельзя, проверено: машинка не успевает проехать 73 пикселя своего размера
 	}
 	if (counter % FPS === spawn_interval){
 		spawn_interval -= spawn_interval_decrease;
@@ -179,28 +193,37 @@ function drawField(context){
 		//то это тоже стоит учесть
 		var rightLaneCarPresent = (player.lane === (NUMBER_OF_LANES - 1));
 		for (var i = 0; i < cars.length; ++i){
-			if (cars[i].lane === player.lane - 1){//and probably smth else
+			if (cars[i].lane === player.lane - 1 && cars[i].positionY < player.positionY + CAR_HEIGHT){//and probably smth else
 				leftLaneCarPresent = true;
 			}
-			if (cars[i].lane === player.lane + 1){//and probably smth else
+			if (cars[i].lane === player.lane + 1 && cars[i].positionY < player.positionY + CAR_HEIGHT){//and probably smth else
 				rightLaneCarPresent = true;
 			}
 		}
 		var spawnSameLaneAllowed = !(leftLaneCarPresent === true && rightLaneCarPresent === true);
 		//если машины есть слева и справа, то спавнить машинку прямо перед игроком нельзя
-		var lane;
+		var lane = player.lane;
+		//если слева или справа от игрока нет машинок, то новая заспавнится прямо перед ним.
 		//скорость машины зависит от полосы, по которой она едет. 
 		//(в реальной жизни обычно наоборот, но игры - это ложь.)
-		if (Math.random() > 0.5){
+		/*if (Math.random() > 0.5){
 			lane = player.lane;
 		}
 		else{
 			lane = Math.floor(Math.random() * 4);
-		}
+		}*/
 		while (!spawnSameLaneAllowed && lane === player.lane){
-			lane = Math.floor(Math.random() * 4);
+			//увеличить вероятность спавна на наиболее удаленной полосе
+			if (Math.random() < 0.5){
+				while (lane <= player.lane + 1 && lane >= player.lane - 1){
+					lane = Math.floor(Math.random() * 4);
+				}
+			}
+			else{
+				lane = Math.floor(Math.random() * 4);
+			}
 		}
-		var velocity = Math.random() * 1.5 + (5 + lane / 2); //точные цифры - в блокноте.
+		var velocity = Math.random() * 1.5 + (5 + lane / 2) + velocityIncrease; //точные цифры - в блокноте.
 		var car = new otherCar(lane, -CAR_HEIGHT, velocity);
 		console.log("new car spawned: lane = " + car.lane + ", velocity = " + car.velocity + ", #frame = " + counter + ", #frame in second = " + counter % FPS);
 		cars.push(car);
@@ -313,7 +336,6 @@ function playerSprite (lane, y){
 		this.positionX += displacementX;
 		this.turnCounter--;
 		if (this.turnCounter === 0){
-			this.lane += this.direction;
 			this.direction = DIRECTION_DIRECT;
 			console.log("player's lane = " + this.lane);
 		}
